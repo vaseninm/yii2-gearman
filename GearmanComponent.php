@@ -42,13 +42,19 @@ class GearmanComponent extends Component
         $this->worker = new \GearmanWorker();
 
         if (empty($this->servers)) {
-            $this->servers = ['localhost'];
+            $this->servers = ['127.0.0.1:4730'];
         }
 
         $this->client->addServers(implode(',', $this->servers));
-        $this->client->setOptions(implode(' | ', $this->clientOptions));
         $this->worker->addServers(implode(',', $this->servers));
-        $this->worker->setOptions(implode(' | ', $this->workerOptions));
+
+        if (! empty($this->clientOptions)) {
+            $this->client->setOptions(implode(' | ', $this->clientOptions));
+        }
+
+        if (! empty($this->workerOptions)) {
+            $this->worker->setOptions(implode(' | ', $this->workerOptions));
+        }
     }
 
     /**
@@ -105,13 +111,13 @@ class GearmanComponent extends Component
 
     /**
      * @param string $function function name
-     * @param callable $callback callable function function($data)
+     * @param callable $callback callable function function($data, \GearmanJob $job)
      * @return bool
      */
     public function register($function, callable $callback) {
         return $this->worker->addFunction($function, function (\GearmanJob $job) use ($callback) {
             $result = Json::decode($job->workload());
-            return $callback($result['data']);
+            return $callback($result['data'], $job);
         });
     }
 
